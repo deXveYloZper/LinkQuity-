@@ -1,4 +1,5 @@
 import requests
+import time
 from utils.config_loader import get_api_key
 
 # List of coins with their CoinGecko IDs and CoinMarketCap symbols
@@ -20,7 +21,7 @@ CRYPTO_LIST = [
 def fetch_from_coingecko(coin_id):
     """Fetches trading volume and other data for a specified cryptocurrency from CoinGecko."""
     api_key = get_api_key('COINGECKO_API_KEY')  # Assuming you're storing the API key in .env
-    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}?market_data=true"
     
     # Example of adding an API key in query parameters (hypothetical)
     params = {
@@ -29,17 +30,23 @@ def fetch_from_coingecko(coin_id):
     
     try:
         response = requests.get(url, params=params)  # Pass API key in params if required
+        response.raise_for_status()
         data = response.json()
-        trading_volume_usd = data['market_data']['total_volume']['usd']
-        current_price_usd = data['market_data']['current_price']['usd']
-        market_cap_usd = data['market_data']['market_cap']['usd']
-        
-        return {
-            'trading_volume_usd': trading_volume_usd,
-            'current_price_usd': current_price_usd,
-            'market_cap_usd': market_cap_usd
-        }
-    except Exception as e:
+        if 'market_data' in data:
+            trading_volume_usd = data['market_data']['total_volume']['usd']
+            current_price_usd = data['market_data']['current_price']['usd']
+            market_cap_usd = data['market_data']['market_cap']['usd']
+
+            return {
+                'trading_volume_usd': trading_volume_usd,
+                'current_price_usd': current_price_usd,
+                'market_cap_usd': market_cap_usd
+            }
+        else:
+            print(f"Error fetching {coin_id} from CoinGecko: 'market_data' key not found")
+            return None
+
+    except requests.RequestException as e:
         print(f"Error fetching {coin_id} from CoinGecko: {e}")
         return None
 
